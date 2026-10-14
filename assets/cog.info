@@ -1,0 +1,83 @@
+Driver: GTiff/GeoTIFF
+Files: cog.tif
+Size is 2048, 1536
+Coordinate System is:
+PROJCRS["WGS 84 / Pseudo-Mercator",
+    BASEGEOGCRS["WGS 84",
+        ENSEMBLE["World Geodetic System 1984 ensemble",
+            MEMBER["World Geodetic System 1984 (Transit)"],
+            MEMBER["World Geodetic System 1984 (G730)"],
+            MEMBER["World Geodetic System 1984 (G873)"],
+            MEMBER["World Geodetic System 1984 (G1150)"],
+            MEMBER["World Geodetic System 1984 (G1674)"],
+            MEMBER["World Geodetic System 1984 (G1762)"],
+            MEMBER["World Geodetic System 1984 (G2139)"],
+            ELLIPSOID["WGS 84",6378137,298.257223563,
+                LENGTHUNIT["metre",1]],
+            ENSEMBLEACCURACY[2.0]],
+        PRIMEM["Greenwich",0,
+            ANGLEUNIT["degree",0.0174532925199433]],
+        ID["EPSG",4326]],
+    CONVERSION["Popular Visualisation Pseudo-Mercator",
+        METHOD["Popular Visualisation Pseudo Mercator",
+            ID["EPSG",1024]],
+        PARAMETER["Latitude of natural origin",0,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8801]],
+        PARAMETER["Longitude of natural origin",0,
+            ANGLEUNIT["degree",0.0174532925199433],
+            ID["EPSG",8802]],
+        PARAMETER["False easting",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8806]],
+        PARAMETER["False northing",0,
+            LENGTHUNIT["metre",1],
+            ID["EPSG",8807]]],
+    CS[Cartesian,2],
+        AXIS["easting (X)",east,
+            ORDER[1],
+            LENGTHUNIT["metre",1]],
+        AXIS["northing (Y)",north,
+            ORDER[2],
+            LENGTHUNIT["metre",1]],
+    USAGE[
+        SCOPE["Web mapping and visualisation."],
+        AREA["World between 85.06°S and 85.06°N."],
+        BBOX[-85.06,-180,85.06,180]],
+    ID["EPSG",3857]]
+Data axis to CRS axis mapping: 1,2
+Origin = (1267631.677081361413002,5985936.559068722650409)
+Pixel Size = (1.194328566960000,-1.194328566960000)
+Metadata:
+  TIFFTAG_SOFTWARE=Adobe Photoshop CS6 (Windows)
+  TIFFTAG_DATETIME=2023:01:03 14:50:55
+  TIFFTAG_ARTIST=Data source: State of Tyrol - data.tirol.gv.at
+  TIFFTAG_XRESOLUTION=72
+  TIFFTAG_YRESOLUTION=72
+  TIFFTAG_RESOLUTIONUNIT=2 (pixels/inch)
+  AREA_OR_POINT=Area
+Image Structure Metadata:
+  LAYOUT=COG
+  SOURCE_COLOR_SPACE=YCbCr
+  COMPRESSION=YCbCr JPEG
+  INTERLEAVE=PIXEL
+  JPEG_QUALITY=75
+  JPEGTABLESMODE=1
+Tiling Scheme:
+  NAME=GoogleMapsCompatible
+  ZOOM_LEVEL=17
+Corner Coordinates:
+Upper Left  ( 1267631.677, 5985936.559) ( 11d23'14.38"E, 47d16' 4.97"N)
+Lower Left  ( 1267631.677, 5984102.070) ( 11d23'14.38"E, 47d15'24.71"N)
+Upper Right ( 1270077.662, 5985936.559) ( 11d24'33.49"E, 47d16' 4.97"N)
+Lower Right ( 1270077.662, 5984102.070) ( 11d24'33.49"E, 47d15'24.71"N)
+Center      ( 1268854.670, 5985019.315) ( 11d23'53.94"E, 47d15'44.84"N)
+Band 1 Block=256x256 Type=Byte, ColorInterp=Red
+  NoData Value=0
+  Overviews: 1024x768, 512x384, 256x192
+Band 2 Block=256x256 Type=Byte, ColorInterp=Green
+  NoData Value=0
+  Overviews: 1024x768, 512x384, 256x192
+Band 3 Block=256x256 Type=Byte, ColorInterp=Blue
+  NoData Value=0
+  Overviews: 1024x768, 512x384, 256x192
