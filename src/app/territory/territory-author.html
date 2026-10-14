@@ -1,0 +1,215 @@
+<div class="author-shell">
+  <aside class="author-panel">
+    <h1>Territory Author</h1>
+    <p class="hint">
+      Pick a Territory in the list to edit. Drag white vertices to move; green
+      midpoints insert a point; right-click a vertex to delete it. Use
+      <strong>Draw</strong> for new polygons, set a name, then download and
+      commit <code>public/territories.geojson</code>.
+    </p>
+
+    <div class="modes">
+      <button
+        type="button"
+        [class.active]="mode() === 'polygon'"
+        (click)="setMode('polygon')"
+      >
+        Draw
+      </button>
+      <button
+        type="button"
+        [class.active]="mode() === 'select'"
+        (click)="setMode('select')"
+      >
+        Select
+      </button>
+    </div>
+
+    @if (hasSelection()) {
+      <label>
+        name
+        <input
+          type="text"
+          [value]="selectedName()"
+          (input)="onNameInput($any($event.target).value)"
+          autocomplete="off"
+        />
+      </label>
+      <p class="id-preview">
+        id: <code>{{ selectedIdPreview() || '—' }}</code>
+      </p>
+      <button type="button" class="primary" (click)="applyProperties()">
+        Apply
+      </button>
+    }
+
+    <div class="territory-lists">
+      @if (changedTerritories().length > 0) {
+        <section class="territory-list" aria-label="Local changes">
+          <button
+            type="button"
+            class="territory-list-toggle"
+            [attr.aria-expanded]="!changedListCollapsed()"
+            (click)="toggleChangedList()"
+          >
+            <span class="territory-list-chevron" aria-hidden="true">
+              {{ changedListCollapsed() ? '▸' : '▾' }}
+            </span>
+            <h2>Local changes ({{ changedTerritories().length }})</h2>
+          </button>
+          @if (!changedListCollapsed()) {
+            <ul>
+              @for (territory of changedTerritories(); track territory.drawId) {
+                <li class="territory-row">
+                  <button
+                    type="button"
+                    class="territory-item"
+                    [class.active]="selectedDrawIdSignal() === territory.drawId"
+                    [class.status-new]="territory.status === 'new'"
+                    [class.status-modified]="territory.status === 'modified'"
+                    (click)="selectFromList(territory.drawId)"
+                  >
+                    <span class="territory-name">
+                      {{ territory.name || '(unnamed)' }}
+                    </span>
+                    <span class="territory-id">
+                      {{ territory.id || 'no id' }}
+                      · {{ territory.status }}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="territory-delete"
+                    title="Delete territory"
+                    aria-label="Delete {{ territory.name || territory.id || 'territory' }}"
+                    (click)="deleteTerritory(territory.drawId)"
+                  >
+                    <svg
+                      class="territory-delete-icon"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M6 2h4l.5 1H14v1.5h-1.1l-.8 9.2A1.5 1.5 0 0 1 10.6 15H5.4a1.5 1.5 0 0 1-1.5-1.3L3.1 4.5H2V3h3.5L6 2zm1 0 .3.8h1.4L9 2H7zM4.6 4.5l.8 9h5.2l.8-9H4.6zM6.5 6v6h-1V6h1zm2 0v6h-1V6h1zm2 0v6h-1V6h1z"
+                      />
+                    </svg>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+
+      <section class="territory-list" aria-label="Original territories">
+        <button
+          type="button"
+          class="territory-list-toggle"
+          [attr.aria-expanded]="!originalListCollapsed()"
+          (click)="toggleOriginalList()"
+        >
+          <span class="territory-list-chevron" aria-hidden="true">
+            {{ originalListCollapsed() ? '▸' : '▾' }}
+          </span>
+          <h2>Original ({{ originalTerritories().length }})</h2>
+        </button>
+        @if (!originalListCollapsed()) {
+          @if (originalTerritories().length === 0) {
+            <p class="empty">None.</p>
+          } @else {
+            <ul>
+              @for (territory of originalTerritories(); track territory.drawId) {
+                <li class="territory-row">
+                  <button
+                    type="button"
+                    class="territory-item"
+                    [class.active]="selectedDrawIdSignal() === territory.drawId"
+                    (click)="selectFromList(territory.drawId)"
+                  >
+                    <span class="territory-name">
+                      {{ territory.name || '(unnamed)' }}
+                    </span>
+                    <span class="territory-id">
+                      {{ territory.id || 'no id' }}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    class="territory-delete"
+                    title="Delete territory"
+                    aria-label="Delete {{ territory.name || territory.id || 'territory' }}"
+                    (click)="deleteTerritory(territory.drawId)"
+                  >
+                    <svg
+                      class="territory-delete-icon"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <path
+                        fill="currentColor"
+                        d="M6 2h4l.5 1H14v1.5h-1.1l-.8 9.2A1.5 1.5 0 0 1 10.6 15H5.4a1.5 1.5 0 0 1-1.5-1.3L3.1 4.5H2V3h3.5L6 2zm1 0 .3.8h1.4L9 2H7zM4.6 4.5l.8 9h5.2l.8-9H4.6zM6.5 6v6h-1V6h1zm2 0v6h-1V6h1zm2 0v6h-1V6h1z"
+                      />
+                    </svg>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+    </div>
+
+    <button type="button" class="primary download" (click)="download()">
+      Download GeoJSON
+    </button>
+
+    <button
+      type="button"
+      class="reload-origin"
+      [class.highlight]="originHasExtras()"
+      title="{{
+        originHasExtras()
+          ? 'Origin file has Territories missing from your local draft'
+          : 'Discard the local draft and reload public/territories.geojson'
+      }}"
+      (click)="reloadFromOrigin()"
+    >
+      Drop local changes
+    </button>
+
+    <p class="status">{{ status() }}</p>
+  </aside>
+
+  <mgl-map
+    [mapStyle]="mapStyle"
+    [hash]="true"
+    [fitBounds]="fitBounds"
+    [fitBoundsOptions]="fitBoundsOptions"
+    [maxBounds]="maxBounds"
+    [dragRotate]="false"
+    [pitchWithRotate]="false"
+    [touchPitch]="false"
+    [maxPitch]="0"
+    [bearing]="0"
+    [pitch]="0"
+    [renderWorldCopies]="false"
+    [attributionControl]="false"
+    (mapLoad)="onMapLoad($event)"
+  >
+    <mgl-control mglNavigation [showCompass]="false" />
+    <mgl-image-source
+      id="basemap"
+      [url]="basemapUrl"
+      [coordinates]="imageCoordinates"
+    />
+    <mgl-layer
+      id="basemap-layer"
+      type="raster"
+      source="basemap"
+      [paint]="basemapPaint"
+    />
+  </mgl-map>
+</div>

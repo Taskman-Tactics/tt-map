@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
-import { BoardMap } from './board/board-map';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
-  imports: [BoardMap],
+  imports: [RouterOutlet],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',

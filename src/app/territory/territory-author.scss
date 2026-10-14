@@ -1,0 +1,275 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.author-shell {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+.author-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow: auto;
+  background: #0f2433;
+  color: #e8f1f7;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #b7c9d6;
+}
+
+.hint kbd {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid #3d5f75;
+  border-radius: 0.2rem;
+  background: #0a1a24;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8em;
+}
+
+code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8em;
+}
+
+.modes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+button {
+  border: 1px solid #3d5f75;
+  border-radius: 0.25rem;
+  background: #163247;
+  color: inherit;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+button.active,
+button.primary {
+  background: #2a6f97;
+  border-color: #4f9bc4;
+}
+
+.territory-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  flex: 1;
+}
+
+.territory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
+.territory-list-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.2rem 0.35rem;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+
+.territory-list-toggle:hover {
+  background: #163247;
+  border-color: #3d5f75;
+}
+
+.territory-list-chevron {
+  flex-shrink: 0;
+  width: 0.85rem;
+  color: #9bb3c4;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.territory-list h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.territory-list .empty {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #8aa0b0;
+}
+
+.territory-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.territory-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.territory-item {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.territory-delete {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  color: #f0c4c4;
+  border-color: #7a3d3d;
+  background: #3a1c1c;
+}
+
+.territory-delete-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.territory-delete:hover {
+  background: #5a2828;
+  border-color: #a05050;
+}
+
+.territory-name {
+  font-size: 0.9rem;
+}
+
+.territory-id {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #9bb3c4;
+}
+
+.territory-item.active .territory-id {
+  color: #d7eaf6;
+}
+
+.territory-item.status-new {
+  border-color: #2f8f5b;
+  background: #143528;
+  color: #b6f0cd;
+}
+
+.territory-item.status-new .territory-id {
+  color: #8fd9ae;
+}
+
+.territory-item.status-new.active {
+  border-color: #4ecf84;
+  background: #1a4a32;
+}
+
+.territory-item.status-modified {
+  border-color: #b8942a;
+  background: #3a3012;
+  color: #ffe6a8;
+}
+
+.territory-item.status-modified .territory-id {
+  color: #e0c56a;
+}
+
+.territory-item.status-modified.active {
+  border-color: #e0b93a;
+  background: #4a3c14;
+}
+
+button.download {
+  margin-top: 0.25rem;
+}
+
+button.reload-origin.highlight {
+  background: #6a4a12;
+  border-color: #d4a017;
+  color: #ffe6a8;
+  box-shadow: 0 0 0 1px #d4a017;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.id-preview {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #9bb3c4;
+}
+
+input {
+  border: 1px solid #3d5f75;
+  border-radius: 0.25rem;
+  background: #0a1a24;
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+}
+
+.status {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #9fbfa8;
+}
+
+mgl-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .author-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .author-panel {
+    max-height: 40vh;
+  }
+}

@@ -1,0 +1,3 @@
+# Territory GeoJSON authoring
+
+Territory geometries are authored outside the Viewer as a GeoJSON FeatureCollection of simple Polygons in ADR-0001 board space. Until an external API serves them, `public/territories.geojson` is the interim source of truth: Authors load/edit it in a dedicated MapLibre + terra-draw route (not linked from the Viewer), download the file, and commit it back. Each Feature uses a stable string `id` on both `Feature.id` and `properties.id`, plus `properties.name`; Region membership is deferred. The Viewer only displays the collection read-only. Alternatives rejected for v1: Earth-centric GIS as the primary tool (wrong coordinate space), drawing inside the Viewer UI, MultiPolygon/holes, topology snap/validation, and browser write-back to the repo.

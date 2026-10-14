@@ -1,0 +1,10 @@
+---
+description: terra-draw load validation and selection lifecycle for board Authoring
+alwaysApply: true
+---
+
+# terra-draw board authoring
+
+- **Closed rings:** MapLibre may paint Polygons with first≠last; terra-draw `addFeatures` rejects them. Close rings on ingest/export. Always check the returned `StoreValidation[]` and surface reject reasons — silent drops look like “flaky load” while the Viewer still shows the file.
+- **finish vs select:** terra-draw’s `finish` event fires for new draws *and* vertex edits (`dragCoordinate`, `insertMidpoint`, etc.). Calling `setMode('select')` on every finish restarts select mode and clears the selection. Gate mode switches on `context.action === 'draw'`.
+- **Collinear simplify vs midpoints:** Do not run shape-preserving collinear simplify on every `finish`. `insertMidpoint` places a vertex on the edge; simplifying then deletes it before the user can drag. Gate simplify to `context.action === 'draw'` and/or commit/export.

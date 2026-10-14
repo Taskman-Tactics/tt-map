@@ -1,8 +1,15 @@
 ---
-description: Keep MapLibre fictional-board coordinates inside valid LngLat
+description: Web Mercator–linear board coords, snap, and MapLibre LngLat limits
 alwaysApply: true
 ---
 
 # MapLibre board coordinates
 
-When overlaying a non-Earth image on MapLibre, do not use raw pixel Y as latitude if it exceeds 90. Scale into valid LngLat (latitude in [-90, 90]), keep a fixed documented scale for API GeoJSON, and verify with a running map before treating board bounds as settled.
+When overlaying a non-Earth image on MapLibre:
+
+- Lay pixels out linearly on the Web Mercator plane (`MercatorCoordinate`), then store WGS84 LngLat for GeoJSON / the API. Do **not** use a “LngLat = pixel/N” box — Mercator warps latitude so visual texels diverge from that lattice.
+- Keep latitude in MapLibre’s valid `[-90, 90]` range (raw pixel Y as latitude fails for tall images).
+- Snap Author geometry by rounding integer px/py on the Mercator grid. Do **not** snap with `round(lngLat * scale) / scale`.
+- Quantize snapped coordinates to terra-draw’s `coordinatePrecision` (9), e.g. `Number(value.toFixed(9))`, and keep the adapter precision in sync — long Mercator floats are rejected as “excessive precision.”
+- When changing snap math, validate against the hand-placed reference Territories (`pixel-snap-reference` fixture); max error must stay under half a basemap texel.
+- Verify with a running map before treating board bounds as settled.

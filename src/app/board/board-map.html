@@ -1,5 +1,6 @@
 <mgl-map
   [mapStyle]="mapStyle"
+  [hash]="true"
   [fitBounds]="fitBounds"
   [fitBoundsOptions]="fitBoundsOptions"
   [maxBounds]="maxBounds"
@@ -24,5 +25,18 @@
     type="raster"
     source="basemap"
     [paint]="basemapPaint"
+  />
+  <mgl-geojson-source id="territories" [data]="territoriesUrl" />
+  <mgl-layer
+    id="territories-fill"
+    type="fill"
+    source="territories"
+    [paint]="territoryFillPaint"
+  />
+  <mgl-layer
+    id="territories-outline"
+    type="line"
+    source="territories"
+    [paint]="territoryLinePaint"
   />
 </mgl-map>

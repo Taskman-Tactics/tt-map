@@ -1,0 +1,16 @@
+---
+description: Commit messages on Windows PowerShell without bash HEREDOC pitfalls
+alwaysApply: true
+---
+
+# PowerShell git commit messages
+
+On Windows PowerShell, do **not** use the bash `git commit -m "$(cat <<'EOF' … EOF)"` pattern (including stuffing it into a `@\" … \"@` here-string). That leaves a literal `EOF` in the commit message.
+
+Prefer:
+
+```powershell
+git commit -m "one-line message"
+```
+
+Or a PowerShell here-string whose content is **only** the message text (no `EOF` delimiters).
