@@ -25,6 +25,21 @@
       </button>
     </div>
 
+    <label class="opacity-control">
+      <span class="opacity-control-header">
+        Fill opacity
+        <span class="opacity-value">{{ fillOpacityPercent() }}%</span>
+      </span>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        [value]="fillOpacity()"
+        (input)="onFillOpacityInput($any($event.target).value)"
+      />
+    </label>
+
     @if (hasSelection()) {
       <label>
         name

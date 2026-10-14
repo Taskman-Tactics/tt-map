@@ -55,7 +55,7 @@ export class BoardMap {
   };
   protected readonly territoryLinePaint: LineLayerSpecification['paint'] = {
     'line-color': '#5a3d0b',
-    'line-width': 1.5,
+    'line-width': 3,
   };
 
   protected readonly mapStyle: StyleSpecification = {

@@ -23,6 +23,8 @@ import {
   TerraDraw,
   TerraDrawPolygonMode,
   TerraDrawSelectMode,
+  type GeoJSONStoreFeatures,
+  type HexColor,
 } from 'terra-draw';
 import { TerraDrawMapLibreGLAdapter } from 'terra-draw-maplibre-gl-adapter';
 import {
@@ -51,7 +53,9 @@ import {
 import { slugifyTerritoryName, uniqueTerritoryId } from './territory-id';
 import {
   clearLocalTerritoryCollection,
+  loadLocalFillOpacity,
   loadLocalTerritoryCollection,
+  saveLocalFillOpacity,
   saveLocalTerritoryCollection,
   snapshotToDraftCollection,
 } from './territory-local-storage';
@@ -64,6 +68,28 @@ const boardPixelSnapping = BOARD_PIXEL_SNAP_ENABLED
     }
   : undefined;
 
+/** Distinct fills that stay readable on the board's blue ocean. */
+const TERRITORY_FILL_PALETTE: readonly HexColor[] = [
+  '#F5276C',
+  '#F54927',
+  '#F5B027',
+  '#27F5B0',
+  '#276CF5',
+  '#B027F5',
+  '#6CF527',
+];
+
+/** Default author fill opacity — light enough to see the basemap through overlaps. */
+const DEFAULT_TERRITORY_FILL_OPACITY = 0.18;
+
+/** Selected polygons stay a bit more opaque than the base fill. */
+function selectedFillOpacity(fillOpacity: number): number {
+  return Math.min(1, fillOpacity + 0.1);
+}
+
+/** Default polygon outline width (px) for authoring. */
+const TERRITORY_OUTLINE_WIDTH = 4;
+
 /** terra-draw store id (UUID by default); Territory slug lives in properties.id. */
 type DrawFeatureId = string | number;
 
@@ -74,8 +100,65 @@ type TerritoryListItem = {
   status: TerritoryEditStatus;
 };
 
+/** Round-robin fill colors keyed by terra-draw feature id. */
+const territoryColorByDrawId = new Map<DrawFeatureId, HexColor>();
+let nextTerritoryColorIndex = 0;
+
 function territoryLabel(territory: TerritoryListItem): string {
   return territory.name || territory.id || String(territory.drawId);
+}
+
+function darkenHex(hex: HexColor, factor = 0.45): HexColor {
+  const r = Number.parseInt(hex.slice(1, 3), 16);
+  const g = Number.parseInt(hex.slice(3, 5), 16);
+  const b = Number.parseInt(hex.slice(5, 7), 16);
+  const channel = (value: number) =>
+    Math.round(value * factor)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+function resetTerritoryColors(): void {
+  territoryColorByDrawId.clear();
+  nextTerritoryColorIndex = 0;
+}
+
+function releaseTerritoryColor(drawId: DrawFeatureId): void {
+  territoryColorByDrawId.delete(drawId);
+}
+
+function assignTerritoryColor(drawId: DrawFeatureId): HexColor {
+  const existing = territoryColorByDrawId.get(drawId);
+  if (existing) {
+    return existing;
+  }
+  const color =
+    TERRITORY_FILL_PALETTE[
+      nextTerritoryColorIndex % TERRITORY_FILL_PALETTE.length
+    ]!;
+  nextTerritoryColorIndex += 1;
+  territoryColorByDrawId.set(drawId, color);
+  return color;
+}
+
+/** Assign palette colors in order (e.g. after loading a FeatureCollection). */
+function assignTerritoryColorsInOrder(drawIds: readonly DrawFeatureId[]): void {
+  resetTerritoryColors();
+  for (const drawId of drawIds) {
+    assignTerritoryColor(drawId);
+  }
+}
+
+function colorForTerritoryFeature(feature: GeoJSONStoreFeatures): HexColor {
+  if (feature.id === undefined || feature.id === null) {
+    return TERRITORY_FILL_PALETTE[0]!;
+  }
+  return assignTerritoryColor(feature.id);
+}
+
+function outlineForTerritoryFeature(feature: GeoJSONStoreFeatures): HexColor {
+  return darkenHex(colorForTerritoryFeature(feature));
 }
 
 function boundsForPolygonRings(
@@ -158,6 +241,9 @@ export class TerritoryAuthor {
   protected readonly originalListCollapsed = signal(false);
   protected readonly changedListCollapsed = signal(false);
   protected readonly originHasExtras = signal(false);
+  protected readonly fillOpacity = signal(
+    loadLocalFillOpacity() ?? DEFAULT_TERRITORY_FILL_OPACITY,
+  );
   protected readonly status = signal('Loading territories…');
 
   protected async onMapLoad(map: MapLibreMap): Promise<void> {
@@ -176,12 +262,12 @@ export class TerritoryAuthor {
           // Light vertex edits without leaving draw mode (finish still switches to select).
           editable: true,
           ...(boardPixelSnapping ? { snapping: boardPixelSnapping } : {}),
-          // Yellow reads clearly on the board’s blue ocean background.
+          // Per-Territory palette + light fill so the basemap stays visible.
           styles: {
-            fillColor: '#F0C14B',
-            fillOpacity: 0.35,
-            outlineColor: '#5A3D0B',
-            outlineWidth: 2,
+            fillColor: colorForTerritoryFeature,
+            fillOpacity: this.fillOpacity(),
+            outlineColor: outlineForTerritoryFeature,
+            outlineWidth: TERRITORY_OUTLINE_WIDTH,
           },
         }),
         new TerraDrawSelectMode({
@@ -202,10 +288,10 @@ export class TerritoryAuthor {
             midPointWidth: 7,
             midPointOutlineWidth: 2,
             midPointOpacity: 1,
-            selectedPolygonColor: '#F0C14B',
-            selectedPolygonFillOpacity: 0.4,
-            selectedPolygonOutlineColor: '#5A3D0B',
-            selectedPolygonOutlineWidth: 2,
+            selectedPolygonColor: colorForTerritoryFeature,
+            selectedPolygonFillOpacity: selectedFillOpacity(this.fillOpacity()),
+            selectedPolygonOutlineColor: outlineForTerritoryFeature,
+            selectedPolygonOutlineWidth: TERRITORY_OUTLINE_WIDTH,
           },
           flags: {
             polygon: {
@@ -282,6 +368,26 @@ export class TerritoryAuthor {
     this.draw?.setMode(mode);
   }
 
+  protected fillOpacityPercent(): number {
+    return Math.round(this.fillOpacity() * 100);
+  }
+
+  protected onFillOpacityInput(rawValue: string): void {
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed)) {
+      return;
+    }
+    const opacity = Math.min(1, Math.max(0, parsed));
+    this.fillOpacity.set(opacity);
+    saveLocalFillOpacity(opacity);
+    this.draw?.updateModeOptions('polygon', {
+      styles: { fillOpacity: opacity },
+    });
+    this.draw?.updateModeOptions('select', {
+      styles: { selectedPolygonFillOpacity: selectedFillOpacity(opacity) },
+    });
+  }
+
   protected selectFromList(drawId: DrawFeatureId): void {
     if (!this.draw) {
       return;
@@ -339,6 +445,7 @@ export class TerritoryAuthor {
     }
 
     this.draw.removeFeatures([drawId]);
+    releaseTerritoryColor(drawId);
     this.refreshTerritoryList();
     this.persistLocalDraft();
     this.status.set(`Deleted ${label}.`);
@@ -402,6 +509,7 @@ export class TerritoryAuthor {
     clearLocalTerritoryCollection();
     this.clearSelection();
     this.draw.clear();
+    resetTerritoryColors();
 
     try {
       const collection = await fetchTerritoryCollection();
@@ -480,6 +588,7 @@ export class TerritoryAuthor {
   ): void {
     const features = toTerraDrawFeatures(collection);
     if (features.length === 0) {
+      resetTerritoryColors();
       this.refreshTerritoryList();
       this.setMode('polygon');
       this.status.set(
@@ -488,7 +597,19 @@ export class TerritoryAuthor {
       return;
     }
 
+    // Clear any prior round-robin state before create-time styling runs.
+    resetTerritoryColors();
     const results = draw.addFeatures(features);
+    const acceptedIds = results
+      .filter(
+        (result): result is typeof result & { id: DrawFeatureId } =>
+          result.valid && result.id !== undefined,
+      )
+      .map((result) => result.id);
+    // Re-assign in FeatureCollection order (create-time styling order is not guaranteed).
+    assignTerritoryColorsInOrder(acceptedIds);
+    this.refreshTerritoryStyles(draw);
+
     const rejected = results.filter((result) => !result.valid);
     this.refreshTerritoryList();
     if (rejected.length > 0) {
@@ -506,6 +627,22 @@ export class TerritoryAuthor {
     this.status.set(
       `Loaded ${features.length} Territories from ${sourceLabel}. Pick one in the list to edit; midpoints add points; Delete removes a selected vertex.`,
     );
+  }
+
+  /** Force terra-draw to re-evaluate fill/outline after round-robin reassignment. */
+  private refreshTerritoryStyles(draw: TerraDraw): void {
+    draw.updateModeOptions('polygon', {
+      styles: {
+        fillColor: colorForTerritoryFeature,
+        outlineColor: outlineForTerritoryFeature,
+      },
+    });
+    draw.updateModeOptions('select', {
+      styles: {
+        selectedPolygonColor: colorForTerritoryFeature,
+        selectedPolygonOutlineColor: outlineForTerritoryFeature,
+      },
+    });
   }
 
   private persistLocalDraft(): void {

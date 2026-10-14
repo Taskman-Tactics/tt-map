@@ -71,6 +71,31 @@ button.primary {
   border-color: #4f9bc4;
 }
 
+.opacity-control {
+  gap: 0.4rem;
+}
+
+.opacity-control-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.opacity-value {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8em;
+  color: #9bb3c4;
+}
+
+.opacity-control input[type='range'] {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  accent-color: #4f9bc4;
+  cursor: pointer;
+}
+
 .territory-lists {
   display: flex;
   flex-direction: column;

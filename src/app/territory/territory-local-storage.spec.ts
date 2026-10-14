@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   clearLocalTerritoryCollection,
+  loadLocalFillOpacity,
   loadLocalTerritoryCollection,
+  saveLocalFillOpacity,
   saveLocalTerritoryCollection,
   snapshotToDraftCollection,
+  TERRITORIES_FILL_OPACITY_STORAGE_KEY,
   TERRITORIES_LOCAL_STORAGE_KEY,
 } from './territory-local-storage';
 
@@ -93,5 +96,27 @@ describe('territory-local-storage', () => {
     const storage = memoryStorage();
     storage.setItem(TERRITORIES_LOCAL_STORAGE_KEY, '{not-json');
     expect(loadLocalTerritoryCollection(storage)).toBeNull();
+  });
+
+  it('round-trips fill opacity through Storage', () => {
+    const storage = memoryStorage();
+    expect(loadLocalFillOpacity(storage)).toBeNull();
+
+    saveLocalFillOpacity(0.42, storage);
+    expect(storage.getItem(TERRITORIES_FILL_OPACITY_STORAGE_KEY)).toBe('0.42');
+    expect(loadLocalFillOpacity(storage)).toBe(0.42);
+  });
+
+  it('clamps fill opacity and rejects non-numeric values', () => {
+    const storage = memoryStorage();
+
+    saveLocalFillOpacity(1.5, storage);
+    expect(loadLocalFillOpacity(storage)).toBe(1);
+
+    saveLocalFillOpacity(-0.2, storage);
+    expect(loadLocalFillOpacity(storage)).toBe(0);
+
+    storage.setItem(TERRITORIES_FILL_OPACITY_STORAGE_KEY, 'nope');
+    expect(loadLocalFillOpacity(storage)).toBeNull();
   });
 });
