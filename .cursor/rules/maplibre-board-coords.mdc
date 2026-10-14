@@ -1,0 +1,8 @@
+---
+description: Keep MapLibre fictional-board coordinates inside valid LngLat
+alwaysApply: true
+---
+
+# MapLibre board coordinates
+
+When overlaying a non-Earth image on MapLibre, do not use raw pixel Y as latitude if it exceeds 90. Scale into valid LngLat (latitude in [-90, 90]), keep a fixed documented scale for API GeoJSON, and verify with a running map before treating board bounds as settled.

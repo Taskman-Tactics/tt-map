@@ -1,0 +1,28 @@
+<mgl-map
+  [mapStyle]="mapStyle"
+  [fitBounds]="fitBounds"
+  [fitBoundsOptions]="fitBoundsOptions"
+  [maxBounds]="maxBounds"
+  [dragRotate]="false"
+  [pitchWithRotate]="false"
+  [touchPitch]="false"
+  [maxPitch]="0"
+  [bearing]="0"
+  [pitch]="0"
+  [renderWorldCopies]="false"
+  [attributionControl]="false"
+  (mapLoad)="onMapLoad($event)"
+>
+  <mgl-control mglNavigation [showCompass]="false" />
+  <mgl-image-source
+    id="basemap"
+    [url]="basemapUrl"
+    [coordinates]="imageCoordinates"
+  />
+  <mgl-layer
+    id="basemap-layer"
+    type="raster"
+    source="basemap"
+    [paint]="basemapPaint"
+  />
+</mgl-map>
