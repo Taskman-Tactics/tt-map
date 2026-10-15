@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  HostListener,
   inject,
   signal,
 } from '@angular/core';
@@ -21,7 +22,7 @@ import {
 import type { Feature, Polygon, Position } from 'geojson';
 import {
   TerraDraw,
-  TerraDrawPolygonMode,
+  TerraDrawModeUndoRedo,
   TerraDrawSelectMode,
   type GeoJSONStoreFeatures,
   type HexColor,
@@ -38,6 +39,14 @@ import {
   snapLngLatToBoardPixel,
 } from '../board/board-pixel-snap';
 import { simplifyPolygonCollinear } from '../board/board-polygon-simplify';
+import {
+  isEditableKeyboardTarget,
+  isUndoKeyEvent,
+  openRingVertices,
+  shouldHandleAuthorUndo,
+  type PendingReopen,
+} from './draw-undo';
+import { ResumablePolygonMode } from './resumable-polygon-mode';
 import {
   classifyTerritoryEditStatus,
   downloadTerritoryCollection,
@@ -196,7 +205,10 @@ export class TerritoryAuthor {
   private readonly destroyRef = inject(DestroyRef);
   private map: MapLibreMap | null = null;
   private draw: TerraDraw | null = null;
+  private polygonMode: ResumablePolygonMode | null = null;
   private selectedDrawId: DrawFeatureId | null = null;
+  /** Just-finished draw; Ctrl+Z reopens until Apply / new Draw / other select. */
+  private pendingReopen: PendingReopen | null = null;
   /** Avoid re-entrant change handling while force-snapping geometries. */
   private snappingGeometries = false;
   /** Skip persist during initial addFeatures so origin load doesn't shadow later file updates. */
@@ -250,6 +262,19 @@ export class TerritoryAuthor {
     this.map = map;
     map.touchZoomRotate.disableRotation();
 
+    const polygonMode = new ResumablePolygonMode({
+      // Light vertex edits without leaving draw mode (finish still switches to select).
+      editable: true,
+      ...(boardPixelSnapping ? { snapping: boardPixelSnapping } : {}),
+      // Per-Territory palette + light fill so the basemap stays visible.
+      styles: {
+        fillColor: colorForTerritoryFeature,
+        fillOpacity: this.fillOpacity(),
+        outlineColor: outlineForTerritoryFeature,
+        outlineWidth: TERRITORY_OUTLINE_WIDTH,
+      },
+    });
+
     const draw = new TerraDraw({
       adapter: new TerraDrawMapLibreGLAdapter({
         map,
@@ -257,19 +282,13 @@ export class TerritoryAuthor {
         // only if we forget to quantize; keep adapter + snap in lockstep.
         coordinatePrecision: BOARD_COORDINATE_DECIMALS,
       }),
+      // Mode undo only — session undo deletes finished features and fights reopen.
+      // Author owns Ctrl/Cmd+Z so reopen + input-focus rules stay consistent.
+      undoRedo: {
+        modeLevel: new TerraDrawModeUndoRedo(),
+      },
       modes: [
-        new TerraDrawPolygonMode({
-          // Light vertex edits without leaving draw mode (finish still switches to select).
-          editable: true,
-          ...(boardPixelSnapping ? { snapping: boardPixelSnapping } : {}),
-          // Per-Territory palette + light fill so the basemap stays visible.
-          styles: {
-            fillColor: colorForTerritoryFeature,
-            fillOpacity: this.fillOpacity(),
-            outlineColor: outlineForTerritoryFeature,
-            outlineWidth: TERRITORY_OUTLINE_WIDTH,
-          },
-        }),
+        polygonMode,
         new TerraDrawSelectMode({
           // Selection is sidebar-only; map clicks must not pick polygons.
           allowManualSelection: false,
@@ -317,6 +336,7 @@ export class TerritoryAuthor {
 
     draw.start();
     this.draw = draw;
+    this.polygonMode = polygonMode;
     this.setMode('select');
 
     draw.on('finish', (id, context) => {
@@ -325,6 +345,7 @@ export class TerritoryAuthor {
       // the edge (collinear with neighbors) until the user drags it off the line.
       if (context.action === 'draw') {
         this.simplifyFeature(id);
+        this.stashPendingReopen(id);
       }
       this.refreshTerritoryList();
       this.persistLocalDraft();
@@ -334,7 +355,9 @@ export class TerritoryAuthor {
         this.setMode('select');
         this.draw?.selectFeature(id);
         this.selectFeature(id);
-        this.status.set('Set a name for the new Territory, then Apply.');
+        this.status.set(
+          'Set a name for the new Territory, then Apply. Ctrl+Z reopens the draw.',
+        );
         return;
       }
       this.selectFeature(id);
@@ -356,6 +379,8 @@ export class TerritoryAuthor {
     this.destroyRef.onDestroy(() => {
       draw.stop();
       this.draw = null;
+      this.polygonMode = null;
+      this.pendingReopen = null;
       this.map = null;
     });
 
@@ -366,6 +391,32 @@ export class TerritoryAuthor {
   protected setMode(mode: 'polygon' | 'select'): void {
     this.mode.set(mode);
     this.draw?.setMode(mode);
+  }
+
+  /** Draw button — starting a new polygon supersedes a just-finished reopen stash. */
+  protected startDrawMode(): void {
+    this.clearPendingReopen();
+    this.setMode('polygon');
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  protected onWindowKeyDown(event: KeyboardEvent): void {
+    const action = shouldHandleAuthorUndo({
+      isUndoKey: isUndoKeyEvent(event),
+      focusIsEditable: isEditableKeyboardTarget(event.target),
+      canModeUndo: this.draw?.canUndo() ?? false,
+      hasPendingReopen: this.hasValidPendingReopen(),
+    });
+    if (!action) {
+      return;
+    }
+
+    event.preventDefault();
+    if (action === 'mode-undo') {
+      this.draw?.undo();
+      return;
+    }
+    this.reopenPendingDraw();
   }
 
   protected fillOpacityPercent(): number {
@@ -391,6 +442,9 @@ export class TerritoryAuthor {
   protected selectFromList(drawId: DrawFeatureId): void {
     if (!this.draw) {
       return;
+    }
+    if (this.pendingReopen && this.pendingReopen.featureId !== drawId) {
+      this.clearPendingReopen();
     }
     this.setMode('select');
     this.draw.selectFeature(drawId);
@@ -439,6 +493,10 @@ export class TerritoryAuthor {
       String(feature?.properties?.['id'] ?? '').trim() ||
       'Territory';
 
+    if (this.pendingReopen?.featureId === drawId) {
+      this.clearPendingReopen();
+    }
+
     if (this.selectedDrawId === drawId) {
       this.draw.deselectFeature(drawId);
       this.clearSelection();
@@ -476,6 +534,7 @@ export class TerritoryAuthor {
     const id = uniqueTerritoryId(base, this.takenIdsExcluding(this.selectedDrawId));
     this.draw.updateFeatureProperties(this.selectedDrawId, { id, name });
     this.selectedIdPreview.set(id);
+    this.clearPendingReopen();
     this.refreshTerritoryList();
     this.persistLocalDraft();
     this.status.set(`Updated ${name} (${id}). Download when ready to commit.`);
@@ -507,6 +566,7 @@ export class TerritoryAuthor {
 
     this.draftReady = false;
     clearLocalTerritoryCollection();
+    this.clearPendingReopen();
     this.clearSelection();
     this.draw.clear();
     resetTerritoryColors();
@@ -768,6 +828,60 @@ export class TerritoryAuthor {
     this.hasSelection.set(false);
     this.selectedName.set('');
     this.selectedIdPreview.set('');
+  }
+
+  private stashPendingReopen(id: DrawFeatureId): void {
+    if (!this.draw) {
+      this.pendingReopen = null;
+      return;
+    }
+    const feature = this.draw.getSnapshotFeature(id);
+    if (!feature || feature.geometry.type !== 'Polygon') {
+      this.pendingReopen = null;
+      return;
+    }
+    const ring = feature.geometry.coordinates[0] ?? [];
+    const vertices = openRingVertices(ring);
+    if (vertices.length < 3) {
+      this.pendingReopen = null;
+      return;
+    }
+    this.pendingReopen = { featureId: id, vertices };
+  }
+
+  private clearPendingReopen(): void {
+    this.pendingReopen = null;
+  }
+
+  private hasValidPendingReopen(): boolean {
+    const pending = this.pendingReopen;
+    if (!pending || !this.draw) {
+      return false;
+    }
+    return this.draw.hasFeature(pending.featureId);
+  }
+
+  /** Undo a just-finished close: remove the feature and resume polygon drawing. */
+  private reopenPendingDraw(): void {
+    const pending = this.pendingReopen;
+    if (!pending || !this.draw || !this.polygonMode) {
+      return;
+    }
+
+    this.pendingReopen = null;
+
+    if (this.selectedDrawId === pending.featureId) {
+      this.draw.deselectFeature(pending.featureId);
+      this.clearSelection();
+    }
+
+    this.draw.removeFeatures([pending.featureId]);
+    releaseTerritoryColor(pending.featureId);
+    this.setMode('polygon');
+    this.polygonMode.resumeDrawing(pending.vertices);
+    this.refreshTerritoryList();
+    this.persistLocalDraft();
+    this.status.set('Drawing reopened — Ctrl+Z removes the last point.');
   }
 
   private previewIdForName(name: string): string {

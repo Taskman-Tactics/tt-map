@@ -4,15 +4,17 @@
     <p class="hint">
       Pick a Territory in the list to edit. Drag white vertices to move; green
       midpoints insert a point; right-click a vertex to delete it. Use
-      <strong>Draw</strong> for new polygons, set a name, then download and
-      commit <code>public/territories.geojson</code>.
+      <strong>Draw</strong> for new polygons;
+      <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Z</kbd> removes the last point (and
+      reopens a just-closed draw). Set a name, then download and commit
+      <code>public/territories.geojson</code>.
     </p>
 
     <div class="modes">
       <button
         type="button"
         [class.active]="mode() === 'polygon'"
-        (click)="setMode('polygon')"
+        (click)="startDrawMode()"
       >
         Draw
       </button>
