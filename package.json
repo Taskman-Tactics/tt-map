@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "deploy": "ng deploy --cname=map.taskman-tactics.win"
   },
   "private": true,
   "packageManager": "bun@1.4.3",
